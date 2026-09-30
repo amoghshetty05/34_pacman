@@ -27,21 +27,31 @@ HOUSE_EXIT, HOUSE_CENTER = (7, 10), (9, 10)
 PLAYER_START = (11, 10)
 FRIGHT_SECONDS = 3.0
 PLAYER_STEP, GHOST_STEP = 0.14, 0.17
+hud_flash_until = 0  # pygame tick (ms) when the HUD flash ends
 
 
 def ghost_color(name, mode):
     """Return an (r, g, b) colour override for a ghost, or None to keep the default."""
-    pass
+    if mode != "frightened":
+        return None
+    return {
+        "blinky": (40, 60, 230),
+        "pinky": (120, 60, 220),
+        "inky": (30, 160, 200),
+        "clyde": (60, 200, 140),
+    }.get(name)
 
 
 def on_pellet_eaten(score, pellets_left):
     """Called after every pellet is eaten; add sound, flashes, or bonus fruit here."""
-    pass
+    global hud_flash_until
+    if pellets_left == 0:
+        hud_flash_until = pygame.time.get_ticks() + 1500
 
 
 def bonus_life_threshold():
     """Return a score value at which the player earns an extra life, or None to disable bonus lives."""
-    pass
+    return 5000
 
 
 def is_wall(cell):
@@ -157,7 +167,7 @@ class Game:
             return
         self.pellets.remove(cell)
         self.score += 10
-        if MAZE[cell[0]][cell[1]] == "O":
+        if MAZE[cell[0]][cell[1]] == "o":
             self.score += 40
             self.fright_left = FRIGHT_SECONDS
             for ghost in self.ghosts:
@@ -240,7 +250,10 @@ class Game:
                 pygame.draw.rect(screen, color, (gx - TILE // 2 + 3, gy - 2, TILE - 6, TILE // 2 - 2))
                 pygame.draw.circle(screen, (255, 255, 255), (gx - 4, gy - 4), 3)
                 pygame.draw.circle(screen, (255, 255, 255), (gx + 4, gy - 4), 3)
-        hud = font.render(f"Score {self.score}   Lives {self.lives}   R = reset", True, (240, 240, 240))
+        now = pygame.time.get_ticks()
+        flashing = now < hud_flash_until and (now // 150) % 2 == 0
+        hud_color = (255, 255, 120) if flashing else (240, 240, 240)
+        hud = font.render(f"Score {self.score}   Lives {self.lives}   R = reset", True, hud_color)
         screen.blit(hud, (8, ROWS * TILE + 6))
         if self.state != "play":
             text = "YOU WIN! Press R" if self.state == "win" else "GAME OVER - Press R"
